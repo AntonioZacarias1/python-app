@@ -37,11 +37,14 @@ jobs:
     runs-on: self-hosted
     steps:
       
-      - name: Argocd app sync
+      - name: Argocd Login
         shell: bash
         run: | 
           argocd login localhost:8080 \
           --insecure \
           --username admin \
-          --password ${{ secrets.ARGOCD_PASS  }}
+          --password ${{ secrets.ARGOCD_PASS }}
+      - name: Argocd app sync
+        shell: bash
+        run: |
           argocd app sync python-app
