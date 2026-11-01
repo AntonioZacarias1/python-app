@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: antzacarias808/python-app-2:${IMAGE_TAG}
+          tags: antzacarias808/python-app-2:${{ env.IMAGE_TAG }}
