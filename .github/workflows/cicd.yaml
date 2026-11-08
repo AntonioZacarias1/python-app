@@ -36,7 +36,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Checkout repository
-        users: actions/checkout@v3
+        uses: actions/checkout@v3
 
       - name: Modify values file
         shell: bash
