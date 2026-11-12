@@ -42,10 +42,11 @@ jobs:
         shell: bash
         run: |
           YQ_VERSION="v4.47.2"
-          sudo wget -q \
+          sudo curl -L \
             "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
-            -O /usr/local/bin/yq
+             -o /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
+          yq --version
           yq -i '.image.tag = strenv(IMAGE_TAG)' charts/python-app/values.yaml
           cat charts/python-app/values.yaml
       - name: Commit tag
