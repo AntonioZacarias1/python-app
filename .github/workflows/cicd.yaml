@@ -40,15 +40,75 @@ jobs:
 
       - name: Modify values file
         shell: bash
+        env:
+          IMAGE_TAG: ${{ needs.ci.outputs.commit_id }}
         run: |
-          YQ_VERSION="v4.47.2"
-          sudo curl -L \
-            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
-             -o /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq
-          yq --version
-          yq -i '.image.tag = strenv(${{ needs.ci.outputs.commit_id }})' charts/python-app/values.yaml
-          cat charts/python-app/values.yaml
+          set -euo pipefail
+
+          if [[ ! "$IMAGE_TAG" =~ ^[0-9a-f]{8}$ ]]; then
+            echo "Invalid IMAGE_TAG: '$IMAGE_TAG'"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("charts/python-app/values.yaml")
+          tag = os.environ["IMAGE_TAG"]
+
+          lines = path.read_text().splitlines(keepends=True)
+
+          inside_image = False
+          image_indent = 0
+          updated = 0
+
+          for i, line in enumerate(lines):
+              image_match = re.match(r'^(\s*)image:\s*(?:#.*)?(?:\r?\n)?$', line)
+
+              if image_match:
+                  inside_image = True
+                  image_indent = len(image_match.group(1))
+                  continue
+
+              if inside_image:
+                  if line.strip() and not line.lstrip().startswith("#"):
+                      indent = len(line) - len(line.lstrip())
+
+                      if indent <= image_indent:
+                          inside_image = False
+
+                  if inside_image:
+                      tag_match = re.match(
+                          r'^(\s*tag:\s*)(.*?)(\s+#.*)?(\r?\n)?$',
+                          line
+                      )
+
+                      if tag_match:
+                          prefix = tag_match.group(1)
+                          comment = tag_match.group(3) or ""
+                          newline = tag_match.group(4) or ""
+
+                          lines[i] = f'{prefix}"{tag}"{comment}{newline}'
+                          updated += 1
+
+          if updated != 1:
+              raise SystemExit(
+                  f"Expected exactly one image.tag field, found {updated}"
+              )
+
+          path.write_text("".join(lines))
+
+          print(f"Updated image.tag to: {tag}")
+          PY
+
+          echo "Resulting image configuration:"
+          grep -A3 '^image:' charts/python-app/values.yaml
+
+          git diff --check
+          git diff -- charts/python-app/values.yaml
+
       - name: Commit tag
         uses: EndBug/add-and-commit@v9
         with:
