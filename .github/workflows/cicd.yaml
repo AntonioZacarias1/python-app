@@ -27,9 +27,13 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
+          context: .
           push: true
           platforms: linux/amd64,linux/arm64
           tags: antzacarias808/python-app-2:${{ env.IMAGE_TAG }}
+          provenance: false
+          build-args: |
+            BUILDKIT_PROGRESS=plain
     outputs:
       commit_id: ${{ env.IMAGE_TAG }}
   cd:
